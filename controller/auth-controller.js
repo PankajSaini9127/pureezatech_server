@@ -5,12 +5,15 @@ const user = require("../modals/AuthModal.js");
 
 const JWT_key = process.env.JWT_KEY;
 
+const bcrypt = require("bcrypt");
+
 async function signup (req,res){
   try {
     const newUser = new user(req.body);
     await newUser.save();
 
-    return res.status(200).send({success:true,message:"USER created successfully",user:newUser});
+
+    return res.status(200).send({status:200,message:"USER created successfully"});
 
  
   } catch (error) {
@@ -21,15 +24,23 @@ async function signup (req,res){
 
 async function signin (req,res){
     try {
-    //   res.send(req.body)
+    const doesEmail = await user.findOne({email:req.body.email});
+    
+    if(!doesEmail) return res.status(203).send({status:203,message:"Invalid Input!"});
 
-    console.log(req.body)
+    const match = await bcrypt.compare(
+      req.body.password,
+      doesEmail.password
+    );
+
+    console.log(match)
+    if(!match) return res.status(203).send({status:203,message:"Invalid Input!"});
+    
 
       delete req.body.password;
       let jwtPayload = req.body;
 
-     
-
+  
       await jwt.sign({ jwtPayload }, JWT_key, (err, token) => {
         
         if (!err) {
@@ -38,12 +49,6 @@ async function signin (req,res){
             message: "Login Successful.",
             data: {  ...req.body },
             authToken: token,
-          });
-        } else {
-          return res.status(203).send({
-            status: 203,
-            message: "Invalid Creds.",
-            data: err,
           });
         }
       });
